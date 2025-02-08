@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur de Plan de Dissertation</title>
+</head>
+<body>
+    <form id="requestForm">
+        <input type="text" id="prompt" placeholder="Entrez votre sujet ici" required>
+        <button type="submit">Générer</button>
+    </form>
+    <div id="affiche"></div>
+
+    <script>
+        document.getElementById('requestForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const inputElement = document.getElementById('prompt');
+            const responseElement = document.getElementById('affiche');
+            const sujet = inputElement.value.trim();
+
+            if (!sujet) {
+                responseElement.innerText = "Veuillez entrer un sujet.";
+                return;
+            }
+
+            const messages = [
+                { role: "system", content: "Tu es un assistant expert en dissertation." },
+                { role: "user", content: `Fais un plan de dissertation structuré avec une accroche, un plan détaillé (parties et sous-parties) avec des exemples et des mots de liaison sur : ${sujet}` }
+            ];
+
+            const apiUrl = 'https://api.openai.com/v1/chat/completions';
+
+            responseElement.innerText = 'Chargement...';
+
+            try {
+                // Récupérer la clé API depuis une variable d'environnement côté serveur
+                const apiKey = await fetch('/get-api-key').then(res => res.text());
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-3.5-turbo',
+                        messages: messages,
+                        max_tokens: 500,
+                        temperature: 0.7
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Erreur API OpenAI: ${response.status} - ${await response.text()}`);
+                }
+
+                const data = await response.json();
+                responseElement.innerText = data.choices?.[0]?.message?.content.trim() || 'Aucune réponse reçue.';
+            } catch (error) {
+                console.error('Erreur:', error);
+                responseElement.innerText = 'Une erreur s\'est produite. Vérifiez la console.';
+            }
+        });
+    </script>
+</body>
+</html>
